@@ -32,9 +32,9 @@ class Workout {
   }
 
   // Public Methods/Interfaces
-  click() {
-    this.clicks++;
-  }
+  // click() {
+  //   this.clicks++;
+  // }
 }
 
 class Running extends Workout {
@@ -72,15 +72,21 @@ class Cycling extends Workout {
 ///////////////////////////////////////
 // APPLICATION ARCHITECTURE
 class App {
-  // Private fields
+  // Private fields on Instances
   #map;
   #mapZoomLevel = 13;
   #mapEvent;
-  #workoutArr = [];
+  #workoutArr;
+  #KEY_WORKOUT = 'workoutArr';
 
   constructor() {
-    this._getPosition(); //get current position from Browser
+    // Get current position from Browser, ❗️Async
+    this._getPosition();
 
+    // Get data from local storage
+    this._getLocalStorage(this.#KEY_WORKOUT, []);
+
+    // Attach event handlers
     form.addEventListener('submit', this._newWorkout.bind(this));
 
     inputType.addEventListener('change', this._toggleElevationField);
@@ -102,6 +108,7 @@ class App {
       );
   }
 
+  //once map has loaded successfully
   _loadMap(position) {
     // console.log(position);
     const { latitude } = position.coords;
@@ -120,6 +127,10 @@ class App {
 
     //👉 handling click event on map
     this.#map.on('click', this._showForm.bind(this));
+
+    this.#workoutArr.forEach(work => {
+      this._renderWorkoutMarker(work);
+    });
   }
 
   _showForm(mapE) {
@@ -232,9 +243,10 @@ class App {
 
     // Hide form + clear input fields:
     this._hideForm();
-  }
 
-  // Set local storage to all workouts:
+    // Set local storage to all workouts:
+    this._setLocalStorage(this.#KEY_WORKOUT);
+  }
 
   _renderWorkoutMarker(curWorkout) {
     //👉 display a marker upon submitting a form with a location selected from the map
@@ -328,6 +340,43 @@ class App {
 
     // workout.click();
   }
+
+  _isSupported() {
+    return typeof Storage !== 'undefined';
+  }
+
+  //🙅 Should NOT use localStorage API to store large amount of data (will slow down ur App)
+  _setLocalStorage(key) {
+    //check browser support for localStorage/sessionStorage
+    if (this._isSupported())
+      localStorage.setItem(key, JSON.stringify(this.#workoutArr));
+    else console.log('Sorry! No Web Storage support..');
+  }
+
+  _getLocalStorage(key, defaultVal = 'N/A') {
+    //check browser support for localStorage/sessionStorage
+    if (this._isSupported()) {
+      //parse the stored value back into its original form
+      /*
+      [😐 Problem introduced]: when we converted our Object to a String, then parse it back to Object type
+        ==> ❌ we lost the Prototype Chain
+      */
+      const data = JSON.parse(localStorage.getItem(key)) ?? defaultVal;
+
+      this.#workoutArr = data;
+
+      this.#workoutArr.forEach(work => {
+        this._renderWorkout(work);
+      });
+    } else console.log('Sorry! No Web Storage support..');
+  }
+
+  // Public Methods/Interfaces
+  reset() {
+    localStorage.removeItem(this.#KEY_WORKOUT);
+    location.reload();
+  }
 }
 
 const app = new App();
+// app.reset();
