@@ -9,8 +9,10 @@ const inputCadence = document.querySelector('.form__input--cadence');
 const inputElevation = document.querySelector('.form__input--elevation');
 
 class Workout {
+  // Public fields
   date = new Date();
   id = (Date.now() + '').slice(-10); //❗️should NEVER create ids on our own
+  clicks = 0;
 
   constructor(coords, distance, duration) {
     // this.date = ...
@@ -27,6 +29,11 @@ class Workout {
     this.description = `${this.type[0].toUpperCase()}${this.type.slice(1)} on ${
       months[this.date.getMonth()] //0-based
     } ${this.date.getDate()}`;
+  }
+
+  // Public Methods/Interfaces
+  click() {
+    this.clicks++;
   }
 }
 
@@ -65,7 +72,9 @@ class Cycling extends Workout {
 ///////////////////////////////////////
 // APPLICATION ARCHITECTURE
 class App {
+  // Private fields
   #map;
+  #mapZoomLevel = 13;
   #mapEvent;
   #workoutArr = [];
 
@@ -75,6 +84,8 @@ class App {
     form.addEventListener('submit', this._newWorkout.bind(this));
 
     inputType.addEventListener('change', this._toggleElevationField);
+
+    containerWorkouts.addEventListener('click', this._moveToPopup.bind(this));
   }
 
   _getPosition() {
@@ -100,7 +111,7 @@ class App {
     const coords = [latitude, longitude];
 
     //🟢 Display a Map using ✨Leaflet Library
-    this.#map = L.map('map').setView(coords, 13); //13 is the zoom level
+    this.#map = L.map('map').setView(coords, this.#mapZoomLevel);
 
     L.tileLayer('https://tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {
       attribution:
@@ -295,6 +306,27 @@ class App {
   `;
 
     form.insertAdjacentHTML('afterend', htmlWorkoutItem);
+  }
+
+  _moveToPopup(e) {
+    //using Event Delegation
+    const workoutEl = e.target.closest('.workout');
+
+    //👉 use guard clause if couldn't find workoutEl (null: clicking outside of workoutEl)
+    if (!workoutEl) return;
+
+    const workout = this.#workoutArr.find(
+      work => work.id === workoutEl.dataset.id
+    );
+
+    this.#map.setView(workout.coords, this.#mapZoomLevel, {
+      animate: true,
+      pan: {
+        duration: 1,
+      },
+    });
+
+    // workout.click();
   }
 }
 
